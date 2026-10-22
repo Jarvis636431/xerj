@@ -38,6 +38,29 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- `xerj autoindex` no longer deletes an existing index when a later run uses
+  a reduced disk-budget plan (`--plan code-and-docs`, or `--yes` when the
+  default plan does not fit). The plan's keep-set was applied to the walk
+  before reconcile, so files the plan left out looked removed: the
+  `--no-graph` generation emitted `Delete` for their groups, and the graph
+  path swept them as exclusions. A re-run that would drop already-indexed
+  files now exits 4 and lists those files and the datasets that would be
+  left empty. `--drop-indexed` is the confirmation that deletes them.
+  `--plan` and `--yes` choose what to index; they do not agree to the
+  deletion.
+
+- `POST /_ask` (`xerj_plan`) grounds a slash-bearing path in the prompt as a
+  keyword `prefix` on `ax_path` (then `path`, `filepath`, `file`, `ax_file`).
+  A directory gets a trailing slash so `crates/app/src/` does not match
+  `crates/app/src2/`. An index with none of those keyword fields is a 422
+  that names the path, instead of dropping it as an ignored lowercase
+  modifier. `xerj_map` lists the `ax_*` locators stamped on every record,
+  and when the live mapping can be read its `field_count` is the catalog
+  fields union the top-level mapping fields — the same set the plan counts,
+  labeled on both sides. Cardinality of a locator the profiler never sampled
+  stays unmeasured
+  ([#2120](https://github.com/xerj-org/xerj/issues/2120)).
+
 - A bare hub question that names a language or a technology
   (`xerj "how do I use async let in Swift"`, `xerj "Swift Result type map"`)
   routes from the catalogue entry — slug, topics, a language word in the
