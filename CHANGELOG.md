@@ -26,6 +26,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- MCP `xerj_search` accepts `prefix` as an alternative to `index`, matching
+  `xerj search --prefix`: `project` searches `project-*`. Conflicting scope
+  arguments and empty or non-string prefixes are rejected before HTTP requests.
+  The default remains `ax-*` (#2080, prefix support only).
+
 - `xerj autoindex --walk-only` stops after the walk. It prints each top-level
   folder's file count and size, what the ignore rules would drop and which
   rule, and the totals. It does not hash or sniff file contents. `--dry-run`
