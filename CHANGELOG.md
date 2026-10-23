@@ -22,6 +22,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- `POST /{index}/_count` honours `min_score`. The handler rebuilds a `size: 0`
+  search body from the query alone, so the threshold used to be dropped: for
+  `{"query":{"match":…},"min_score":10}` `_search` returned 0 while `_count`
+  returned every match. Both the single-index and the multi-index/alias paths
+  now set it on the request, and a non-numeric value is the same 400
+  `parse_exception` `_search` gives.
+
 - MCP `xerj_code_search` token budgets preserve adjacent definitions and distinct
   snippets at the same citation. Rendered text is deduped only when both its
   locator and displayed passage match an already-shown block; display labels,
@@ -58,6 +65,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   selects this highlighter, and it is the default for a `semantic_text`
   field on a semantic query. Chunks are not wrapped in `<em>` tags. A
   lexical `match` on the same field still highlights query terms.
+
+- A single JSON document over 8 MiB is not indexed, so one file of 50 MB
+  or more cannot abort the node during autoindex or `_bulk` (#1122).
+  Autoindex streams a top-level array, or a top-level array of records
+  inside a larger object, one element at a time and skips only the values
+  that exceed the limit. The skip names the file. A bulk item over the
+  limit is HTTP 413 and its neighbours still index. The ceiling is fixed,
+  not a new setting. Files over 64 MiB are still not read; the skip now
+  says so.
+
+- Opening an index whose snapshot names a segment file that is already
+  gone drops that segment instead of failing every later `_search` with
+  `Segment … not found`. A sibling segment that is still on disk stays
+  readable, and sequence numbers from the missing segment are not reused.
+  Object-store mode is unchanged: a catalogue whose bundle is missing
+  still refuses to open. This is what let `xerj brain --fresh` finish
+  its catalog read-back after a data directory was only partly removed.
 
 - A best-effort helper thread that cannot be created no longer aborts the
   process. On Unix those threads are started with `pthread_create` and do not
