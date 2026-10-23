@@ -22,6 +22,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- MCP JSON search responses with `max_tokens` no longer deduplicate rows
+  with distinct `ax_locator` values or hits from different indices merely
+  because their relative paths and passage line numbers match. Deduplication
+  includes the available source index, file identity and record locator;
+  overlapping file and code-symbol passages in the same source still
+  deduplicate. Plain-string `xerj_search` requests the
+  provenance fields needed for this distinction by default.
+
 - A `semantic` query on a `semantic_text` field returns `highlight` fragments
   when the request asks for them (#1947). The fragments are the field's
   best-scoring chunks for the query embedding, in score order, limited by
