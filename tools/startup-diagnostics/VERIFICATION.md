@@ -32,6 +32,12 @@ cargo +1.97.1 build --locked --offline --release -j 32 -p xerj-server -p es-yaml
 - Workflow timeout guard passed (40 jobs / 12 workflows). Python compilation
   passed. New Markdown is covered by the explicit `!tools/**/*.md` rule.
 
+A private standalone copy of `startup_data_dir.rs` passed all 4 helper tests.
+Changing its successful `create_dir` branch to report `created=false` made
+exactly the nested-directory and file-refusal/recovery regressions fail
+(2 failed, 2 passed). Production source was not mutated. This independently
+checks that new-directory reporting is exercised, beyond matching banner text.
+
 From the repository root:
 
 ```sh
