@@ -31,7 +31,11 @@ fn sessions_cli_exports_only_redacted_conversation_and_refuses_overwrite() {
         String::from_utf8_lossy(&result.stderr)
     );
     let report: Value = serde_json::from_slice(&result.stdout).unwrap();
+    assert_eq!(report["schema_version"], 1);
     assert_eq!(report["records"], 2);
+    assert_eq!(report["source_lines"], 4);
+    assert_eq!(report["skipped_records"], 2);
+    assert_eq!(report["skipped_blocks"], 3);
     let bytes = std::fs::read(&output).unwrap();
     let text = std::str::from_utf8(&bytes).unwrap();
     assert!(text.contains("[REDACTED_EMAIL]"));
