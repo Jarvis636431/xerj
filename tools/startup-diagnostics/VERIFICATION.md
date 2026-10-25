@@ -64,7 +64,7 @@ engine/target/release/es-yaml-runner --url "$PRIVATE_NODE_URL" \
   --dir engine/tests/es-compat-yaml/yaml
 ```
 
-**229 files: 1,447 passed, 0 failed, 10 skipped, 1,457 total; exit 0.**
+**230 files: 1,447 passed, 0 failed, 10 skipped, 1,457 total; exit 0.**
 The unchanged policy reported 75 catch-lenient cases. Node shutdown exited 0;
 no YAML, runner or policy was edited. These are local source-build receipts,
 not a verification of published release assets or hosted merge-ref CI.
