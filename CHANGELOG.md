@@ -35,6 +35,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- Opt-in lexical `judge` now matches CJK characters and adjacent pairs inside
+  uninterrupted Chinese/Japanese/Korean text instead of treating the whole
+  run as one word (refs #2580). Single-character evidence is retained, pairs
+  add adjacency evidence, and non-CJK word tokenization stays unchanged.
+  This changes judged CJK scores/threshold outcomes; it does not change the
+  first-stage analyzer or recover candidates absent from its result page.
+
 - Boolean text queries with one `must` match now keep `filter` and `must_not`
   clauses non-scoring before a flush and on mixed memory/segment indices.
   Their retained hits use the same BM25 scores as the bare match (#2403).
