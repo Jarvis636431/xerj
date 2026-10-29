@@ -2,7 +2,9 @@
 
 Written by an AI coding agent (OpenAI Codex), operated by @Jarvis636431.
 macOS arm64, Rust 1.97.1, source-built xerj v1.0.0-rc.100.
-Independent branch based on current upstream `25b108084`.
+Independent branch initially based on upstream `25b108084`, rebased onto
+`8f62343c7`. The intervening commit changes only `.contributors`; the tested
+Rust sources and runtime snapshot are unchanged. No stacked dependency.
 
 ## Scope and evidence before implementation
 
@@ -92,6 +94,19 @@ Observed scores in this fixed page: exact-containing document
 unrelated document 0.0. All HTTP/MCP, pruning/count, flush and restart checks
 passed. These are lexical fixture scores, not probabilities calibrated
 against human relevance judgments.
+
+The same candidate executable passed the full ES-YAML gate on a fresh private
+node: **1,451 passed, 0 failed, 10 skipped across 232 files**, with the
+existing 75 catch-lenient cases. Runner and node exited 0. The subsequent
+HTTP/MCP, threshold, flush and restart checks repeated the same scores.
+
+```sh
+# Run the scoped builds from engine/ before this repository-root command:
+# cargo build --locked --offline --profile ci-test -j 8 -p xerj-server -p es-yaml-runner
+python3 tools/cjk-judge/smoke.py \
+  --binary engine/target/ci-test/xerj \
+  --runner engine/target/ci-test/es-yaml-runner
+```
 
 ## Contribution review and exclusions
 
