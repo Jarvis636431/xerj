@@ -6,7 +6,37 @@ Original verification: independent branch initially based on upstream `25b108084
 `8f62343c7`. The intervening commit changes only `.contributors`; the tested
 Rust sources and runtime snapshot are unchanged. No stacked dependency.
 
-## Main integration (2026-10-30)
+## Main refresh after #2697 (2026-10-30)
+
+Merge upstream `6a7b390ac` into the prior PR head `25c61738d`. The only
+conflict is the CHANGELOG insertion point introduced by #2697; preserve its
+32 MiB batch-response fix entry and the CJK entry. The previous maintainer
+merge remains in the ancestry. The judge implementation, HTTP regression,
+smoke harness and rerank documentation are byte-identical to the previous
+PR head; the effective main diff is still the same six files.
+
+Fresh reruns on this composition: default rerank 59 passed, `judge-local`
+61 passed and HTTP judge 15 passed, all with zero failures, ignores or
+filters. Scoped rerank release build, formatting, strict Clippy in both
+configurations, Python syntax, whitespace and the workflow-timeout guard
+passed. The isolated node/runner build passed with the existing autoindex
+`resolve_reporting` dead-code warning. Original failing-before-fix evidence
+and scope exclusions below remain applicable; no new behavior is added by
+this conflict resolution.
+
+Fresh private-node ES-YAML on this composition: **1,453 passed, 0 failed,
+10 skipped across 233 files**, retaining 74 existing catch-lenient cases.
+The same executable then passed HTTP/MCP order, CJK evidence, threshold
+counts, engine totals and original `_score` before flush, after flush and
+after graceful restart. Scores remained exact 0.5900621118012421, partial
+0.24340586742297435 and unrelated 0.0. The harness, runner and node exited 0.
+Snapshot SHA-256:
+`71735dfe2699509fd66c6febc2e5e84b9b7414e795854d0c8a9a7add56dc9907`.
+These are fresh local receipts; hosted CI for the pushed refresh remains
+separate. Linux/Windows, trained-model quality and broad relevance were not
+re-tested. No performance claim is made.
+
+## Earlier main integration (2026-10-30)
 
 Merge current upstream `befe92035` into the PR's remote head `e45809c31`,
 preserving the maintainer-authored merge and its egress-inventory fix (#2639).
