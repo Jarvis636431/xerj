@@ -9,6 +9,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- A Nix flake: `nix run github:xerj-org/xerj` builds and runs `xerj` from
+  source, `nix build` produces it, and `nix develop` opens a shell with the
+  Rust toolchain. The package builds the engine and embeds the Console assets
+  with no network access during the build. (#2479)
 - `xerj autoindex map --html <FILE>` and `--md <FILE>` export an offline
   report with datasets, format counts, top symbols, graph file hubs,
   catalog exclusions and suggested searches. `--redact-paths` hides file
