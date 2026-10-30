@@ -149,6 +149,11 @@ pub struct IndexCfg {
     /// `xerj autoindex <folder>`. `xerj corpus index` sets `corpus.json` so
     /// the hub manifest is not indexed as a document dataset.
     pub exclude_rels: Vec<String>,
+    /// `--exclude <glob>` patterns (#2483): root-relative paths left out of
+    /// the walk's inventory. Same glob syntax as [`Self::stub_globs`]. Unlike
+    /// an ignore file this needs nothing on disk, so a generated tree can be
+    /// skipped without touching the checkout.
+    pub exclude: Vec<String>,
     /// `xerj corpus index` only (#1985): skip data files (CSV/HDF/simulation
     /// output — see [`crate::CORPUS_DATA_EXTS`]) instead of indexing them as
     /// records. `--include-data` turns it off. Never set by
@@ -208,6 +213,9 @@ pub struct RemoveCfg {
     /// When set, `remove` also deletes `journal.ndjson` here. The default
     /// journal for the selected folder is deleted either way.
     pub state_dir: Option<PathBuf>,
+    /// `--uncataloged`: when the prefix has no catalog run and no resume
+    /// journal, delete the live `<prefix>-*` indices nothing names (#2405).
+    pub uncataloged: bool,
 }
 
 /// `xerj autoindex s3://bucket/prefix --watch`: poll a bucket and emit a change
@@ -314,7 +322,7 @@ pub fn help_text_with(feedback: bool) -> String {
          \x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20--dry-run`: walk, sniff, infer, print the plan.\n\
          \x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20Nothing is written to an index. With no\n\
          \x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20folder, `map` reads the catalog on --url\n\
-         \x20\x20\x20\x20xerj autoindex remove --prefix <P> [--root <DIR>] [--yes]\n\
+         \x20\x20\x20\x20xerj autoindex remove --prefix <P> [--root <DIR>] [--uncataloged] [--yes]\n\
          \x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20list one folder's indices and catalog rows,\n\
          \x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20then delete them. Nothing is deleted without\n\
          \x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20--yes or a terminal y. Another folder under\n\
@@ -322,6 +330,10 @@ pub fn help_text_with(feedback: bool) -> String {
          \x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20build of this folder left, with no catalog run, is\n\
          \x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20included. A cataloged index another folder still names\n\
          \x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20is left in place.\n\
+\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20With --uncataloged, a prefix with no catalog run\n\
+\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20and no resume journal (a build that never reached\n\
+\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20finalize, its journal gone) drops the live <P>-*\n\
+\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20indices that no catalog row names.\n\
          \x20\x20\x20\x20xerj autoindex status [OPTIONS]       resume-journal + index progress view\n\
          \x20\x20\x20\x20xerj autoindex s3://bucket/prefix --watch [OPTIONS]\n\
          \x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20poll object storage and emit a change feed\n\
@@ -396,6 +408,10 @@ pub fn help_text_with(feedback: bool) -> String {
          \x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20matches file names anywhere ('*.bvh'); with '/'\n\
          \x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20it matches the root-relative path\n\
          \x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20('unity/**/*.csv'). '**' crosses directories\n\
+         \x20\x20\x20\x20--exclude <GLOB>     leave matching paths out of the index entirely (not\n\\
+         \x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20walked, not counted). Repeatable, same glob syntax\n\\
+         \x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20as --stub ('gen/**', '*.log'). Use it for a tree you do\n\\
+         \x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20not want to edit an ignore file for.\n\\
          \x20\x20\x20\x20--no-ignore          index everything: no .gitignore, no .xerjignore, no\n\
          \x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20.git/info/exclude, no built-in defaults. Hidden files\n\
          \x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20(.env, .git/, .ssh) stay skipped either way — that is\n\
@@ -938,6 +954,7 @@ pub fn parse(args: Vec<String>) -> Result<Cmd, String> {
     let mut follow_symlinks = false;
     let mut follow_symlinks_outside_root = false;
     let mut stub_globs: Vec<String> = Vec::new();
+    let mut exclude_globs: Vec<String> = Vec::new();
     let mut no_ignore = false;
     let mut no_default_ignores = false;
     // One of --max-file-gb / --max-file-mb / --max-file-bytes sets this, all
@@ -961,6 +978,7 @@ pub fn parse(args: Vec<String>) -> Result<Cmd, String> {
     // is not a confirmation for `autoindex remove`.
     let mut yes_flag = false;
     let mut remove_root: Option<String> = None;
+    let mut remove_uncataloged = false;
     let mut markdown = false;
     let mut code_analyzer_explicit = false;
     let mut max_index_bytes: Option<u64> = None;
@@ -1107,6 +1125,7 @@ pub fn parse(args: Vec<String>) -> Result<Cmd, String> {
             "--follow-symlinks" => follow_symlinks = true,
             "--follow-symlinks-outside-root" => follow_symlinks_outside_root = true,
             "--stub" => stub_globs.push(it.next().ok_or("--stub needs a glob pattern")?),
+            "--exclude" => exclude_globs.push(it.next().ok_or("--exclude needs a glob pattern")?),
             "--no-ignore" => no_ignore = true,
             "--no-default-ignores" => no_default_ignores = true,
             "--max-file-gb" => {
@@ -1242,6 +1261,12 @@ pub fn parse(args: Vec<String>) -> Result<Cmd, String> {
                     .ok_or("--code-analyzer needs a value: standard or code")?;
                 code_analyzer = crate::infer::CodeAnalyzer::parse(&raw)?;
                 code_analyzer_explicit = true;
+            }
+            "--uncataloged" => {
+                if remove_uncataloged {
+                    return Err("--uncataloged was given twice".into());
+                }
+                remove_uncataloged = true;
             }
             "--root" => {
                 let raw = it
@@ -1894,6 +1919,14 @@ pub fn parse(args: Vec<String>) -> Result<Cmd, String> {
         })));
     }
 
+    if remove_uncataloged && sub.as_deref() != Some("remove") {
+        return Err(
+            "--uncataloged selects the uncataloged indices `autoindex remove` drops. It is only \
+             supported with `autoindex remove --prefix <P> --uncataloged`."
+                .into(),
+        );
+    }
+
     if remove_root.is_some() && sub.as_deref() != Some("remove") {
         return Err(
             "--root names the folder `autoindex remove` drops. It is only supported with \
@@ -1914,6 +1947,7 @@ pub fn parse(args: Vec<String>) -> Result<Cmd, String> {
                 quiet,
                 xerj_url_note,
                 state_dir: state_dir.clone(),
+                uncataloged: remove_uncataloged,
             },
             prefix_explicit,
             approve_set: approve.is_some(),
@@ -1931,6 +1965,7 @@ pub fn parse(args: Vec<String>) -> Result<Cmd, String> {
                 follow_symlinks,
                 follow_symlinks_outside_root,
                 stubs: !stub_globs.is_empty(),
+                excludes: !exclude_globs.is_empty(),
                 ignore: !ignore_flags_used.is_empty(),
                 max_file: max_file_bytes.is_some(),
                 sample: sample != 500,
@@ -2124,6 +2159,7 @@ pub fn parse(args: Vec<String>) -> Result<Cmd, String> {
                     debounce_ms.unwrap_or(crate::watch::DEFAULT_DEBOUNCE_MS),
                 ),
                 exclude_rels: Vec::new(),
+                exclude: exclude_globs,
                 skip_corpus_data: false,
             })))
         }
@@ -2153,6 +2189,7 @@ struct RemoveReject {
     follow_symlinks: bool,
     follow_symlinks_outside_root: bool,
     stubs: bool,
+    excludes: bool,
     ignore: bool,
     max_file: bool,
     sample: bool,
@@ -2220,6 +2257,7 @@ fn remove_cmd(input: RemoveParse) -> Result<Cmd, String> {
             reject.follow_symlinks_outside_root,
         ),
         ("--stub", reject.stubs),
+        ("--exclude", reject.excludes),
         ("--no-ignore", reject.ignore),
         ("--max-file-bytes", reject.max_file),
         ("--sample", reject.sample),
@@ -3109,6 +3147,20 @@ mod tests {
             Some(std::path::Path::new("/tmp/j"))
         );
         assert!(err(&["data", "--root", "/tmp/a"]).contains("only supported with"));
+        // #2405: the uncataloged opt-in parses for remove and only for remove.
+        let cfg = match parse(
+            ["remove", "--prefix", "proj", "--uncataloged", "--yes"]
+                .into_iter()
+                .map(str::to_string)
+                .collect(),
+        )
+        .unwrap()
+        {
+            Cmd::Remove(cfg) => cfg,
+            other => panic!("expected remove, got {other:?}"),
+        };
+        assert!(cfg.uncataloged);
+        assert!(err(&["data", "--uncataloged"]).contains("only supported with"));
         assert!(err(&["remove", "--prefix", "proj", "--approve", "proceed"]).contains("--yes"));
         assert!(super::help_text().contains("autoindex remove"));
     }
@@ -4072,5 +4124,21 @@ mod tests {
             both.contains("already turns off"),
             "the preview walks, so the redundant ignore pair is the indexing error: {both}"
         );
+    }
+
+    /// #2483: `--exclude` takes one glob per flag, so a run can name several
+    /// generated trees without comma-splitting a single value.
+    #[test]
+    fn exclude_is_repeatable_and_keeps_the_patterns_in_order() {
+        let cfg = index(&["data", "--exclude", "gen/**", "--exclude", "*.log"]);
+        assert_eq!(cfg.exclude, ["gen/**", "*.log"]);
+        assert!(index(&["data"]).exclude.is_empty());
+    }
+
+    /// A missing value is a usage error naming the flag, not a silent no-op.
+    #[test]
+    fn exclude_without_a_pattern_is_refused() {
+        let text = err(&["data", "--exclude"]);
+        assert!(text.contains("--exclude needs a glob pattern"), "{text}");
     }
 }

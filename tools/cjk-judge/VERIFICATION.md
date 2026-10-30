@@ -2,9 +2,61 @@
 
 Written by an AI coding agent (OpenAI Codex), operated by @Jarvis636431.
 macOS arm64, Rust 1.97.1, source-built xerj v1.0.0-rc.100.
-Independent branch initially based on upstream `25b108084`, rebased onto
+Original verification: independent branch initially based on upstream `25b108084`, rebased onto
 `8f62343c7`. The intervening commit changes only `.contributors`; the tested
 Rust sources and runtime snapshot are unchanged. No stacked dependency.
+
+## Main integration (2026-10-30)
+
+Merge current upstream `befe92035` into the PR's remote head `e45809c31`,
+preserving the maintainer-authored merge and its egress-inventory fix (#2639).
+Resolve the sole conflict in `CHANGELOG.md` by retaining both the CJK entry
+and every upstream entry. The judge implementation, HTTP regression, smoke
+harness and `docs/RERANK.md` are byte-identical to the previous PR head.
+The effective diff remains the same six files; no stacked prerequisite,
+workflow change, upstream rollback or new product behavior is introduced.
+
+Fresh commands on the composed tree, from `engine/`:
+
+```sh
+cargo test --locked --offline -p xerj-rerank
+cargo test --locked --offline -p xerj-rerank --features judge-local
+cargo build --locked --offline --release -j 32 -p xerj-rerank
+cargo fmt --all --check
+cargo clippy --locked --offline -p xerj-rerank --all-targets -- -D warnings
+cargo clippy --locked --offline -p xerj-rerank --features judge-local --all-targets -- -D warnings
+cargo build --locked --offline --profile ci-test -j 8 -p xerj-server -p es-yaml-runner
+cargo test --locked --offline --profile ci-test -p xerj-api --test judge_stage_http
+```
+
+Default rerank: 59 passed; `judge-local`: 61 passed. Both have zero failures,
+ignored tests or filters, including all four egress-inventory tests. The
+old filter below is historical and is no longer required. Scoped release
+build, formatting and strict Clippy in both configurations passed.
+The workflow-timeout guard and Python syntax check also passed.
+
+HTTP judge: 15 passed, zero failures, ignored tests or filters. The isolated
+node/runner build passed with the existing autoindex `resolve_reporting`
+dead-code warning. From repository root, the unchanged smoke command above
+(`python3 tools/cjk-judge/smoke.py --binary engine/target/ci-test/xerj
+--runner engine/target/ci-test/es-yaml-runner`) exited 0:
+
+- ES-YAML: 1,453 passed, 0 failed, 10 skipped across 233 files; 74 existing
+  catch-lenient cases. No suite, skip or catch-lenient rule changed in this PR.
+- The same executable snapshot passed CJK HTTP/MCP order, threshold counts,
+  engine totals and original `_score` checks before flush, after flush and
+  after graceful restart. Scores were exact 0.5900621118012421, partial
+  0.24340586742297435, unrelated 0.0 in all three checks.
+- Executable snapshot SHA-256:
+  `c0a919e7c69e8a8c9418386e5703081ea3f3da19fc3380c0e0839760d5d69e5a`.
+
+Audited the composed diff against `docs/CONTRIBUTION_REVIEW.md`: upstream
+API/storage/workflow changes are intact, existing CJK/non-CJK assertions are
+unchanged, and the original failing-before-fix receipt below remains the
+regression evidence. All original scope limits and non-applicable durable
+state, migration, accelerator and distributed-write sections still apply.
+Linux/Windows and broad relevance/model quality were not re-tested. Hosted
+CI on the pushed head is separate from these local results.
 
 ## Scope and evidence before implementation
 

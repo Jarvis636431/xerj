@@ -1431,6 +1431,10 @@ pub fn tool_specs_with(include_hub: bool) -> Value {
                     "confirm": {
                         "type": "boolean",
                         "description": "Delete what the plan lists. false, or omitted, prints the plan and deletes nothing."
+                    },
+                    "uncataloged": {
+                        "type": "boolean",
+                        "description": "Only when the plan says the prefix has no catalog run and no resume journal and lists `uncataloged` indices (a build that never reached finalize): include those live `<prefix>-*` indices in the plan. They are deleted only with `confirm: true`."
                     }
                 },
                 "required": ["prefix"]
@@ -2637,6 +2641,9 @@ fn build_search_with_mapping(
         body.entry("_source".to_string()).or_insert_with(|| {
             json!([
                 "ax_path",
+                // Every name of a deduplicated file, so the hit cites the
+                // live one rather than a backup copy (#2402).
+                "ax_paths",
                 "ax_file",
                 "ax_locator",
                 "path",
@@ -3118,6 +3125,16 @@ async fn run_autoindex_remove(ctx: &Ctx, args: &Value) -> Value {
         Some(Value::Bool(true)) => true,
         Some(_) => return tool_text("xerj_autoindex_remove: `confirm` must be a boolean", true),
     };
+    let uncataloged = match args.get("uncataloged") {
+        None | Some(Value::Null) | Some(Value::Bool(false)) => false,
+        Some(Value::Bool(true)) => true,
+        Some(_) => {
+            return tool_text(
+                "xerj_autoindex_remove: `uncataloged` must be a boolean",
+                true,
+            )
+        }
+    };
     let url = ctx.base_url.clone();
     let api_key = api_key_from_header(ctx.auth.clone());
     let joined = tokio::task::spawn_blocking(move || {
@@ -3129,6 +3146,7 @@ async fn run_autoindex_remove(ctx: &Ctx, args: &Value) -> Value {
             yes: confirm,
             prompt: false,
             state_dir: None,
+            uncataloged,
         })
     })
     .await;
@@ -3429,12 +3447,33 @@ fn node_unreachable(err: &reqwest::Error) -> bool {
 /// The sentence an agent can act on. `err` is the client detail, kept so the
 /// refusal is still diagnosable.
 fn node_not_listening(base_url: &str, err: &dyn std::fmt::Display) -> String {
-    let base = base_url.trim_end_matches('/');
-    format!(
-        "no XERJ node is listening at {base}. xerj mcp does not start a node. \
-         Start one with:\n  {START_LOCAL_NODE}\n\
-         then retry this tool. ({err})"
+    node_not_listening_with(
+        base_url,
+        err,
+        xerj_common::nodedir::unreachable_node_hint(base_url),
     )
+}
+
+/// [`node_not_listening`] with the `node.lock` diagnosis supplied (#2455).
+/// A node that was running and died reads differently from one that was
+/// never started: the hint names its data dir and PID.
+fn node_not_listening_with(
+    base_url: &str,
+    err: &dyn std::fmt::Display,
+    hint: Option<String>,
+) -> String {
+    let base = base_url.trim_end_matches('/');
+    match hint {
+        Some(hint) => format!(
+            "no XERJ node is listening at {base}. xerj mcp does not start a node. {hint} \
+             Then retry this tool. ({err})"
+        ),
+        None => format!(
+            "no XERJ node is listening at {base}. xerj mcp does not start a node. \
+             Start one with:\n  {START_LOCAL_NODE}\n\
+             then retry this tool. ({err})"
+        ),
+    }
 }
 
 /// reqwest's `Display` often stops at "error sending request"; the OS reason
@@ -3717,9 +3756,10 @@ mod tests {
     /// is covered by the tests below.
     #[test]
     fn node_not_listening_names_the_url_and_the_documented_start_command() {
-        let msg = node_not_listening(
+        let msg = node_not_listening_with(
             "http://localhost:9200/",
             &"tcp connect error: Connection refused (os error 111)",
+            None,
         );
         assert!(
             msg.contains("no XERJ node is listening at http://localhost:9200. xerj mcp"),
@@ -3733,6 +3773,32 @@ mod tests {
         assert!(msg.contains("Connection refused (os error 111)"), "{msg}");
         assert!(!msg.contains("HTTP "), "{msg}");
         assert!(!msg.contains("-d "), "do not invent a short flag: {msg}");
+    }
+
+    /// #2455: a node that ran and died is named, not reported as never started.
+    #[test]
+    fn node_not_listening_carries_the_stale_node_lock_hint() {
+        let data = tempfile::tempdir().unwrap();
+        std::fs::write(data.path().join("node.lock"), "4242").unwrap();
+        let hint = xerj_common::nodedir::node_lock_hint(data.path(), 9200, &|_| {
+            xerj_common::nodedir::PidState::Dead
+        });
+        let msg = node_not_listening_with(
+            "http://localhost:9200",
+            &"Connection refused (os error 111)",
+            hint,
+        );
+        assert!(
+            msg.contains("no XERJ node is listening at http://localhost:9200"),
+            "{msg}"
+        );
+        assert!(msg.contains("pid 4242"), "{msg}");
+        assert!(msg.contains("is no longer running"), "{msg}");
+        assert!(
+            msg.contains(&format!("--data-dir {}", data.path().display())),
+            "{msg}"
+        );
+        assert!(msg.contains("Connection refused (os error 111)"), "{msg}");
     }
 
     /// The path an agent actually hits: `xerj_search` against a closed port.

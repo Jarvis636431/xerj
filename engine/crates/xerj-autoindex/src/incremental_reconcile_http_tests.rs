@@ -1168,6 +1168,7 @@ fn cfg(root: &Path, state_dir: &Path, url: &str, semantic: bool) -> IndexCfg {
         label: None,
         debounce: std::time::Duration::from_millis(0),
         exclude_rels: Vec::new(),
+        exclude: Vec::new(),
         skip_corpus_data: false,
     }
 }
@@ -7390,4 +7391,136 @@ fn a_file_that_changes_size_during_snapshot_seal_is_skipped() {
             .any(|doc| doc.get("value").and_then(Value::as_str) == Some("after")),
         "the rerun indexes the bytes the file settled on"
     );
+}
+
+/// #2577: a `--no-graph` run whose options differ from the committed
+/// generation is refused before anything is copied, and the refusal names the
+/// option. It used to seal the whole corpus and then report the durable state
+/// as "not internally consistent", which it was not: the original options
+/// still continue the corpus.
+#[test]
+fn changed_option_is_refused_before_sealing_and_named() {
+    let _guard = HTTP_E2E_LOCK.lock().unwrap_or_else(|p| p.into_inner());
+    let _replay_guard = sync_executor::REPLAY_FAILPOINT_TEST_LOCK
+        .lock()
+        .unwrap_or_else(|p| p.into_inner());
+    let corpus = tempfile::tempdir().unwrap();
+    let state_dir = tempfile::tempdir().unwrap();
+    fs::write(corpus.path().join("a.csv"), "id,value\n1,alpha\n").unwrap();
+    let endpoint = HttpEndpoint::start();
+    let config = cfg(corpus.path(), state_dir.path(), &endpoint.url, false);
+    assert_eq!(run_index(config.clone()).unwrap(), 0);
+
+    let mut sample = config.clone();
+    sample.sample += 1;
+    let mut symlinks = config.clone();
+    symlinks.follow_symlinks = true;
+    let cases = [
+        (sample, "build fingerprints them differently (--sample"),
+        (symlinks, "--follow-symlinks was off and is now on"),
+    ];
+    for (round, (changed, named)) in cases.into_iter().enumerate() {
+        // Both reconcile arms: an unchanged folder and an edited one.
+        for edit in [false, true] {
+            if edit {
+                fs::write(
+                    corpus.path().join("a.csv"),
+                    format!("id,value\n1,alpha\n2,edit{round}\n"),
+                )
+                .unwrap();
+            }
+            let snapshots = snapshot_names(state_dir.path());
+            let bulks = endpoint.data_bulk_requests();
+            let begins = journal_events(state_dir.path(), "sync_begin");
+            let error = format!("{:#}", run_index(changed.clone()).unwrap_err());
+            let context = format!("edit={edit}: {error}");
+            assert!(
+                error.contains("execution configuration changed since the committed generation"),
+                "{context}"
+            );
+            assert!(error.contains(named), "{context}");
+            assert!(error.contains("Nothing was copied"), "{context}");
+            assert!(!error.contains("not internally consistent"), "{context}");
+            assert_eq!(snapshot_names(state_dir.path()), snapshots, "{context}");
+            assert_eq!(endpoint.data_bulk_requests(), bulks, "{context}");
+            assert_eq!(
+                journal_events(state_dir.path(), "sync_begin"),
+                begins,
+                "{context}"
+            );
+        }
+        // The committed state was never damaged: the original options
+        // continue it and publish the edit.
+        let commits = journal_events(state_dir.path(), "sync_commit");
+        assert_eq!(run_index(config.clone()).unwrap(), 0);
+        assert_eq!(journal_events(state_dir.path(), "sync_commit"), commits + 1);
+    }
+    assert_eq!(endpoint.data_docs().len(), 2);
+}
+
+/// #2684: the `--dry-run` preview of a `--no-graph` rerun must refuse a
+/// changed option the way the real run does. It used to print the plan (or
+/// "already describes this folder") and exit 0 for a run that the real
+/// command then refused, although this route's `--max-minutes` note points
+/// callers at `--dry-run` to check a plan first.
+#[test]
+fn dry_run_refuses_a_changed_option_like_the_real_run() {
+    let _guard = HTTP_E2E_LOCK.lock().unwrap_or_else(|p| p.into_inner());
+    let _replay_guard = sync_executor::REPLAY_FAILPOINT_TEST_LOCK
+        .lock()
+        .unwrap_or_else(|p| p.into_inner());
+    let corpus = tempfile::tempdir().unwrap();
+    let state_dir = tempfile::tempdir().unwrap();
+    fs::write(corpus.path().join("a.csv"), "id,value\n1,alpha\n").unwrap();
+    let endpoint = HttpEndpoint::start();
+    let config = cfg(corpus.path(), state_dir.path(), &endpoint.url, false);
+    assert_eq!(run_index(config.clone()).unwrap(), 0);
+    let bulks = endpoint.data_bulk_requests();
+    let snapshots = snapshot_names(state_dir.path());
+    let journal_before = fs::read(state_dir.path().join("journal.ndjson")).unwrap();
+
+    let mut sample = config.clone();
+    sample.sample += 1;
+    sample.dry_run = true;
+    let mut symlinks = config.clone();
+    symlinks.follow_symlinks = true;
+    symlinks.dry_run = true;
+    let cases = [
+        (sample, "build fingerprints them differently (--sample"),
+        (symlinks, "--follow-symlinks was off and is now on"),
+    ];
+    for (changed, named) in cases {
+        // Both preview arms: an unchanged folder and an edited one.
+        for edit in [false, true] {
+            let rows = if edit {
+                "1,alpha\n2,edit\n"
+            } else {
+                "1,alpha\n"
+            };
+            fs::write(corpus.path().join("a.csv"), format!("id,value\n{rows}")).unwrap();
+            let error = format!("{:#}", run_index(changed.clone()).unwrap_err());
+            let context = format!("edit={edit}: {error}");
+            assert!(
+                error.contains("execution configuration changed since the committed generation"),
+                "{context}"
+            );
+            assert!(error.contains(named), "{context}");
+            assert_eq!(endpoint.data_bulk_requests(), bulks, "{context}");
+            assert_eq!(snapshot_names(state_dir.path()), snapshots, "{context}");
+            assert_eq!(
+                fs::read(state_dir.path().join("journal.ndjson")).unwrap(),
+                journal_before,
+                "{context}"
+            );
+        }
+    }
+
+    // The preview with the committed options still works on both arms.
+    let mut dry = config.clone();
+    dry.dry_run = true;
+    assert_eq!(run_index(dry.clone()).unwrap(), 0);
+    fs::write(corpus.path().join("a.csv"), "id,value\n1,alpha\n").unwrap();
+    assert_eq!(run_index(dry).unwrap(), 0);
+    assert_eq!(endpoint.data_bulk_requests(), bulks);
+    assert_eq!(journal_events(state_dir.path(), "sync_commit"), 1);
 }

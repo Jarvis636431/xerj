@@ -9,6 +9,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- `xerj autoindex --exclude <glob>` leaves matching paths out of the index
+  without editing an ignore file or deleting anything. Repeatable, same glob
+  syntax as `--stub` — a pattern without `/` matches a file name at any depth,
+  one with `/` is anchored at the root. The run reports how many paths it left
+  out (#2483).
+
 - Offline `xerj sessions import --format codex` exports a documented subset
   of one archived Codex rollout through the existing text redactor. It skips
   tools and reasoning, retains physical source locations and archive event
@@ -41,6 +47,34 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   add adjacency evidence, and non-CJK word tokenization stays unchanged.
   This changes judged CJK scores/threshold outcomes; it does not change the
   first-stage analyzer or recover candidates absent from its result page.
+
+- `xerj autoindex` and `xerj autoindex map`: when the node is unreachable at a `localhost` URL, the error now also suggests the same URL with `127.0.0.1`, since the node binds the IPv4 loopback by default and `localhost` can resolve to `::1` first (seen on Windows). (#2688)
+- The node binds its ES-compat and REST listeners before it opens its
+  indices, and on plain-HTTP ports answers every request with
+  `503 node_starting_exception` (with `Retry-After: 1`) until the engine is
+  up. `/health/live` answers 200 `{"status":"starting"}` and `/health/ready`
+  answers 503, so a health check during a long startup no longer sees
+  "connection refused" and takes the node for dead. TLS ports bind early and
+  queue connections until the node is ready (#2575).
+
+- A body sent without a JSON `Content-Type` (the `curl -d` default,
+  `application/x-www-form-urlencoded`) is still refused with 415, as
+  Elasticsearch 8 does, but the reason now names the fix:
+  `-H 'Content-Type: application/json'`. The curl recipes that left the
+  header out now send it (#2575).
+
+- `xerj autoindex` now says why a source file over the 2 MiB code cap is
+  skipped (#2483). Such a file (generated stubs, minified bundles) used to be
+  reported as "no records extracted (code candidate family, 1 junk lines)",
+  which read like a parse failure. The reason now names the cap, the file
+  size, and `.xerjignore` as the way to leave it out of the plan.
+
+- `_reindex` honours `dest.op_type: create`, `conflicts`, and `max_docs`
+  instead of silently dropping them. `create` no longer overwrites an
+  existing destination document: the default abort returns 409 with ES's
+  version-conflict failure, and `conflicts: proceed` skips and counts it.
+  `max_docs` caps successful writes (the query-parameter form is accepted
+  too); invalid values are refused before any source or destination work.
 
 - Boolean text queries with one `must` match now keep `filter` and `must_not`
   clauses non-scoring before a flush and on mixed memory/segment indices.
@@ -126,6 +160,25 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   that is not a bare `---`; the body, the frontmatter text in it and
   `start_line` are unchanged. An unchanged file is not re-extracted, so re-index
   with `xerj autoindex --fresh` to retitle documents already in an index.
+
+- A `--no-graph` re-index whose options differ from the committed generation
+  (for example `--sample` or `--follow-symlinks`) is refused before anything
+  is copied, and the error names the option. It used to copy and prepare the
+  whole folder, then report "could not derive generation N; the durable
+  generation state is not internally consistent", although the state was
+  intact and the original options still updated the corpus (#2577).
+
+- `xerj autoindex --no-graph --dry-run` now refuses a changed option the way
+  the real run does, naming the option, instead of printing a plan and exiting
+  0 for a run that would then be refused. The `--max-minutes` note on this
+  route recommends `--dry-run` as the way to check a plan first (#2684).
+
+- `xerj search` and `xerj def` with no hits on a prefix whose autoindex
+  indices exist but whose first run has not finished now say so: search again
+  once the run finishes, or rerun the same command if it stopped. They used to
+  print the node's other indices and "the catalog lists no prefixes; --prefix
+  is the index name before the dataset slug", which read as a wrong `--prefix`
+  (#2670).
 
 ## [1.0.0-rc.100] - 2026-10-26
 
