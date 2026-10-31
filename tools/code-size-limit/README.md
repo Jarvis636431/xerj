@@ -1,6 +1,6 @@
 # Source-code size skips
 
-Standalone source files handled by the registered tree-sitter extractor have
+Source files handled by the tree-sitter extractor, including Vue/Svelte components, have
 a fixed **2 MiB (2,097,152 byte)** input cap. A file exactly at the cap can be
 parsed; one byte over is skipped. This is independent of the whole-file flags
 `--max-file-gb`, `--max-file-mb` and `--max-file-bytes`. Setting
@@ -20,8 +20,8 @@ This is the diagnostic follow-up to merged
 size refusal reasons. It addresses the misleading reason/help aspects of
 [#2745](https://github.com/xerj-org/xerj/issues/2745). It does **not** raise or
 make the cap configurable, chunk large code files, or change parser behavior.
-Those remain separate work under the issue. SQL source and embedded code in
-other container formats have their own extraction paths; they are not changed.
+Those remain separate work under the issue. SQL source, notebook cells and
+PDFs have their own extraction paths; they are not changed.
 The indexed-document size limit and semantic mapping behavior are also unchanged.
 
 To exclude an unwanted large file from future plans, add its path to the
