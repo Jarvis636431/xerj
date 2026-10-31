@@ -68,6 +68,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   longer take a node from below the watermark into the parent breaker band and
   turn ingest into HTTP 429s. The relief for a search node resting between the
   merge-pool ceiling and the watermark is kept (#2427).
+- **A memory-pressure drain no longer spikes RSS past the cap while it
+  flushes** (#2427). The breaker drain and the cache-release path
+  flushed each index with every non-empty memtable shard building its
+  segment at once, and that working set (parsed documents, columns,
+  postings, stored blocks) is not charged to the memtable budget. On a
+  1,536 MB-capped node one drain took RSS from 1,460 MB to 2,323 MB in
+  about a second. Memory-release flushes now build one shard at a time;
+  ordinary flushes still run in parallel.
 
 - The per-index document version map is smaller and now visible in the
   ingest memory trace. Its keys are `Box<str>` instead of `String`, which
