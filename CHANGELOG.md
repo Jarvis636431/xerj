@@ -113,6 +113,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   200-580 MB of warmed stored slices between 40 breaker engages. Queries
   still hydrate a segment on first read. (Refs #2427)
 
+- `simple_query_string` with `"fields": ["*"]` is answered from the inverted
+  index instead of a stored-document scan of every segment (refs #2427). The
+  bare `*` pattern lowered to a literal `"*"` field that has no index
+  projection, so each query parsed every flushed document; on the 1 GB
+  autoindex release gate a 5-hit query walked ~1.2M stored docs and ran into
+  the 30 s request deadline (raw-surface p95 ≈ 30 s). `["*"]` now lowers like
+  an absent `fields` list, which is what ES means by it: unquoted terms are
+  matched over every mapped searchable text field. A boost on the bare
+  pattern (`"*^2"`) is dropped, and quoted phrases are unchanged. On a
+  flushed segment this also applies the searchable-field rule, so `["*"]` no
+  longer matches through an `index: false` field. `query_string` with
+  `["*"]` is unchanged.
+
 - `_bulk` requests of ordinary text and code are no longer refused with a
   429 while the node has memory to spare. Each raw bulk reserved 28 bytes
   per input byte for analysis, a rate sized for the densest text, so a bulk
