@@ -79,6 +79,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   longer take a node from below the watermark into the parent breaker band and
   turn ingest into HTTP 429s. The relief for a search node resting between the
   merge-pool ceiling and the watermark is kept (#2427).
+- A search that decodes a segment's doc-values sidecar the segment cache has
+  no room to keep now reserves the decoded size in the read transient budget
+  before decoding, and holds it until the query drops the columns. Before,
+  such decodes were neither cached nor reserved, so concurrent searches during
+  heavy ingest could stack decoded sidecars (about 100 MB late in the
+  cap-2048 run) that no memory budget counted (Refs #2427).
 - **A memory-pressure drain no longer spikes RSS past the cap while it
   flushes** (#2427). The breaker drain and the cache-release path
   flushed each index with every non-empty memtable shard building its
