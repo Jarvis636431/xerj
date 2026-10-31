@@ -49,6 +49,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   at `/.well-known/agent-skills/`. The index is generated from the published
   skill's metadata and exact-byte SHA-256, with a CI drift check.
 
+- `xerj autoindex` reads an agent skill's `SKILL.md` frontmatter: every
+  passage of the file is titled with the skill's `name` and carries its
+  `description` as a field of its own, whether the file is read as prose or
+  as line windows. Before, a prose `SKILL.md` was titled by the first line
+  after its frontmatter and a line-window one had no title at all. Only files named exactly
+  `SKILL.md` change; the body, record ids and every other Markdown file index
+  as before. A frontmatter block strict YAML refuses, such as one with an
+  `argument-hint: [path] [--dry-run]` line, still gives its one-line `name`
+  and `description`. Unchanged files are not re-extracted, so an
+  existing index gains the fields as each skill changes, or all at once with
+  `xerj autoindex --fresh`. Part of #2644.
+
 ### Fixed
 
 - The per-index document version map is smaller and now visible in the
