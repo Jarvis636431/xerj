@@ -4385,6 +4385,23 @@ fn scan_file(
 mod clustering_key_tests {
     use super::*;
 
+    #[test]
+    fn perl_code_cap_scan_preserves_the_size_skip_with_a_larger_whole_file_allowance() {
+        let dir = tempfile::tempdir().unwrap();
+        let prefix = "sub important_function { return 1; }\n#";
+        let size = (2 << 20) + 1;
+        let body = format!("{prefix}{}\n", "x".repeat(size - prefix.len() - 1));
+        let scanned = scan(dir.path(), "handwritten.pl", &body);
+        assert_eq!(scanned.sniffed.unwrap().family, Family::Code);
+        assert!(scanned.sketches.is_empty());
+        let (status, reason) = scanned.junk.unwrap();
+        assert_eq!(status, "skipped");
+        assert!(reason.contains("2097153 bytes"), "{reason}");
+        assert!(reason.contains("2097152 bytes"), "{reason}");
+        assert!(reason.contains("--max-file-mb"), "{reason}");
+        assert!(!reason.contains("no records extracted"), "{reason}");
+    }
+
     fn scan(dir: &Path, name: &str, body: &str) -> FileScan {
         let path = dir.join(name);
         std::fs::write(&path, body).unwrap();

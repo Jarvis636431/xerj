@@ -28,9 +28,9 @@ use std::sync::OnceLock;
 use streaming_iterator::StreamingIterator;
 use tree_sitter::{Language, Node, Parser, Query, QueryCursor};
 
-/// Skip machine-generated giants (minified bundles, generated parsers) — past a
-/// couple MB a single "file" is not human code and only bloats the index.
-const CODE_CAP: u64 = 2 << 20;
+/// Whole-file AST extraction budget. Hand-written source can exceed it too;
+/// size is not evidence that a file is generated.
+pub(crate) const CODE_CAP: u64 = 2 << 20;
 
 /// The reason a source file over [`CODE_CAP`] is skipped (#2483). It names
 /// the cap and the file's size, says the run is otherwise unaffected, and
@@ -38,13 +38,16 @@ const CODE_CAP: u64 = 2 << 20;
 fn code_cap_refusal(path: &Path) -> String {
     let mib = |b: u64| b as f64 / (1u64 << 20) as f64;
     let size = std::fs::metadata(path)
-        .map(|m| format!("{:.1} MiB", mib(m.len())))
-        .unwrap_or_else(|_| "size unknown".into());
+        .map(|m| format!("{} bytes", m.len()))
+        .unwrap_or_else(|_| "unavailable".into());
     format!(
-        "source file over the {:.0} MiB code cap ({size}): too large to be hand-written \
-         code (generated stubs, minified bundles), so it is not parsed. The rest of the \
-         run is unaffected. To leave it out of the plan, add its path to .xerjignore",
-        mib(CODE_CAP)
+        "source file over the {:.0} MiB code cap ({} bytes; reported file size: {size}). \
+         It was not parsed and produced no records. This is a separate fixed \
+         code-extraction limit: changing --max-file-gb, --max-file-mb or --max-file-bytes \
+         does not raise it. Other files can continue to index. To leave this file \
+         out of the plan, add its path to .xerjignore",
+        mib(CODE_CAP),
+        CODE_CAP
     )
 }
 
@@ -2579,6 +2582,58 @@ mod tests {
         assert_eq!(script.len(), vue.len());
         assert_eq!(script.lines().count(), vue.lines().count());
         assert!(!script.contains("color") && !script.contains("<div>"));
+    }
+
+    #[test]
+    fn perl_code_cap_boundary_reports_exact_bytes_without_guessing_authorship() {
+        let dir = tempfile::tempdir().unwrap();
+        for size in [CODE_CAP - 1, CODE_CAP, CODE_CAP + 1] {
+            let path = dir.path().join("handwritten.pl");
+            let head = "sub boundary_probe { return 1; }\n#";
+            let tail = "\nsub tail_probe { return 2; }\n";
+            let source = format!(
+                "{head}{}{tail}",
+                "x".repeat(size as usize - head.len() - tail.len())
+            );
+            assert_eq!(source.len() as u64, size);
+            std::fs::write(&path, &source).unwrap();
+            // Exercise logical naming too: durable preparation parses a blob,
+            // but language/source identity still come from the archived name.
+            let blob = dir.path().join("00000000");
+            std::fs::write(&blob, &source).unwrap();
+            for content in [&path, &blob] {
+                let sniffed = crate::sniff::sniff_with_name(content, &path).unwrap();
+                let mut records = Vec::new();
+                let stats = extract(content, &sniffed, &mut |record| {
+                    records.push(record);
+                    true
+                })
+                .unwrap();
+                if size <= CODE_CAP {
+                    assert!(stats.refusal.is_none());
+                    assert!(records.iter().any(|record| record
+                        .fields
+                        .get("name")
+                        .and_then(Value::as_str)
+                        == Some("boundary_probe")));
+                    assert!(records.iter().any(|record| record
+                        .fields
+                        .get("name")
+                        .and_then(Value::as_str)
+                        == Some("tail_probe")));
+                } else {
+                    assert!(records.is_empty());
+                    assert_eq!(stats.records, 0);
+                    let reason = stats.refusal.unwrap();
+                    assert!(reason.contains(&format!("{size} bytes")), "{reason}");
+                    assert!(reason.contains(&format!("{CODE_CAP} bytes")), "{reason}");
+                    assert!(reason.contains("--max-file-mb"), "{reason}");
+                    assert!(reason.contains("does not raise"), "{reason}");
+                    assert!(!reason.contains("too large to be hand-written"), "{reason}");
+                    assert!(!reason.contains("generated stubs"), "{reason}");
+                }
+            }
+        }
     }
 
     /// #2205: `--lang js` must filter on the stored `javascript`, not on a

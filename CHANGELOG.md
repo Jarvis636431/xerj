@@ -63,6 +63,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- Code-extraction size skips now report exact file/limit byte counts and
+  explain that `--max-file-gb` / `--max-file-mb` / `--max-file-bytes` do not
+  raise the separate fixed 2 MiB AST source-file cap. The reason no longer
+  assumes that an oversized file must be generated. Help and Perl boundary
+  regressions cover this diagnostic follow-up to #2666 (Refs #2745); the cap
+  and skipped-file outcomes are unchanged.
+
 - The version map takes about 23% less memory per document (#2427). A
   32-character lowercase hex id (what `xerj autoindex` writes) or a lowercase
   UUID is now packed into 16 bytes inside its bucket instead of paying a
