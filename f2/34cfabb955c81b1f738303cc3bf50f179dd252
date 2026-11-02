@@ -1,0 +1,30 @@
+.github/scripts/functions-field-report-test.mjs
+  s_f20ba7af8aaec4::t_fc7113403c7bed 1-175
+CHANGELOG.md
+  s_f20ba7af8aaec4::t_fc7113403c7bed 119-122
+functions/api/field-report.js
+  s_f20ba7af8aaec4::t_fc7113403c7bed 83-85,88
+functions/README.md
+  s_f20ba7af8aaec4::t_fc7113403c7bed 34,40-42
+.github/workflows/ci.yml
+  s_f20ba7af8aaec4::t_fc7113403c7bed 851-853
+tools/search-hints/VERIFICATION.md
+  s_f20ba7af8aaec4::t_66ff573bfe28d0 164-172
+  s_f20ba7af8aaec4::t_939703403ec7aa 173-174
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.7",
+  "base_commit_sha": "f234cfabb955c81b1f738303cc3bf50f179dd252",
+  "prompts": {},
+  "sessions": {
+    "s_f20ba7af8aaec4": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a19b88-748a-7e90-a005-f76002a1a01b",
+        "model": "gpt-6.1-sol"
+      },
+      "human_author": "Jarvis <mengda636431@gmail.com>"
+    }
+  }
+}
