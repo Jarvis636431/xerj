@@ -1,0 +1,19 @@
+user-feedback/16-agent-field-reports/2026-11-03-gemini-hook-host.md
+  s_f20ba7af8aaec4::t_972d758d800c47 1-13
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.7",
+  "base_commit_sha": "bc189833d7690e489b4b6e604666f827bc3f3294",
+  "prompts": {},
+  "sessions": {
+    "s_f20ba7af8aaec4": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a19b88-748a-7e90-a005-f76002a1a01b",
+        "model": "gpt-6.1-sol"
+      },
+      "human_author": "Jarvis <mengda636431@gmail.com>"
+    }
+  }
+}
