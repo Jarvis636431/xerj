@@ -1,0 +1,35 @@
+tools/search-hints/README.md
+  s_f20ba7af8aaec4::t_2633ceba0498bf 1,15-43,57-59,85-89,121-123,133-135,142-146
+engine/crates/xerj-autoindex/src/init.rs
+  s_f20ba7af8aaec4::t_2633ceba0498bf 68-69,88-93,135,602,615,627,635-646,660-662,669,676-695,736-743
+engine/crates/xerj-autoindex/src/search_hints/tests.rs
+  s_f20ba7af8aaec4::t_2633ceba0498bf 7,19-22,53,89,141,193-199,202-208,215-220,229,240-246,308-316,412,415,443-658
+docs/recipes/air-gapped-deployment.md
+  s_f20ba7af8aaec4::t_2633ceba0498bf 51
+engine/crates/xerj-autoindex/src/search_hints.rs
+  s_f20ba7af8aaec4::t_2633ceba0498bf 1,3,15-75,89,96-103,108,115,119,122,126,134,136,156-157,159-162,168,174,176,179,197,215-232,236,423-424,427,437-440,448,484,496,499-504,507
+tools/search-hints/VERIFICATION.md
+  s_f20ba7af8aaec4::t_2633ceba0498bf 96,99-100,177-349
+tools/search-hints/smoke.py
+  s_f20ba7af8aaec4::t_2633ceba0498bf 2-5,11,57-58,137-161,228-285,311,329-330
+CHANGELOG.md
+  s_f20ba7af8aaec4::t_2633ceba0498bf 17-25
+docs/RERANK.md
+  s_f20ba7af8aaec4::t_2633ceba0498bf 416-417
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.7",
+  "base_commit_sha": "bfbf5ab67dd07fa9d09f736fa8040a1f2947225e",
+  "prompts": {},
+  "sessions": {
+    "s_f20ba7af8aaec4": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a19b88-748a-7e90-a005-f76002a1a01b",
+        "model": "gpt-6.1-sol"
+      },
+      "human_author": "Jarvis <mengda636431@gmail.com>"
+    }
+  }
+}
