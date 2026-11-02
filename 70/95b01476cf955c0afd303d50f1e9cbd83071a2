@@ -1,0 +1,57 @@
+docs/RERANK.md
+  s_f20ba7af8aaec4::t_8ad40d28c59bfd 414-417
+tools/search-hints/VERIFICATION.md
+  s_f20ba7af8aaec4::t_1925db55635c02 152-163
+  s_f20ba7af8aaec4::t_4ad030a2e5ae67 1-42,44-75,77-101
+  s_f20ba7af8aaec4::t_3e5710e586e13c 143-151
+  s_f20ba7af8aaec4::t_c8bad806aeaff5 43,76,102-142
+engine/crates/xerj-rerank/tests/egress_inventory.rs
+  s_f20ba7af8aaec4::t_8ad40d28c59bfd 95-98
+engine/crates/xerj-autoindex/src/search_hints/tests.rs
+  s_f20ba7af8aaec4::t_b033a0e085cb1e 1-160,165-421
+  s_f20ba7af8aaec4::t_48873a5aa39cf0 161-164
+engine/crates/xerj-autoindex/src/search_hints.rs
+  s_f20ba7af8aaec4::t_b033a0e085cb1e 1-65,67-387,393-395,397-422
+  s_f20ba7af8aaec4::t_7b4e675bcb1b55 396
+  s_f20ba7af8aaec4::t_48873a5aa39cf0 66,388-390,392
+engine/crates/xerj-autoindex/src/init.rs
+  s_f20ba7af8aaec4::t_8ad40d28c59bfd 68-69,82-88,129,595,607,618,625,633-637,644,651-656,686,690-694,704-707
+engine/crates/xerj-server/src/main.rs
+  s_f20ba7af8aaec4::t_8ad40d28c59bfd 3123-3128
+engine/crates/xerj-autoindex/src/lib.rs
+  s_f20ba7af8aaec4::t_8ad40d28c59bfd 53
+tools/search-hints/smoke.py
+  s_f20ba7af8aaec4::t_241a7cfba5fd9d 85-86,146-148
+  s_f20ba7af8aaec4::t_7f7d59aac05e80 172
+  s_f20ba7af8aaec4::t_3e6f4c73b989a0 135-138,169,195-196,234
+  s_f20ba7af8aaec4::t_48873a5aa39cf0 46,126
+  s_f20ba7af8aaec4::t_b033a0e085cb1e 1-45,47-84,87-125,127-134,139-145,149-168,170-171,173-194,197-233,235-247
+CHANGELOG.md
+  s_f20ba7af8aaec4::t_e1c7496073b891 12-16
+tools/search-hints/README.md
+  s_f20ba7af8aaec4::t_c8bad806aeaff5 85-90
+  s_f20ba7af8aaec4::t_48873a5aa39cf0 18
+  s_f20ba7af8aaec4::t_95767fa594d81c 1-17,19-84,91-101
+.gitignore
+  s_f20ba7af8aaec4::t_8ad40d28c59bfd 221-223
+docs/recipes/air-gapped-deployment.md
+  s_f20ba7af8aaec4::t_8ad40d28c59bfd 51
+engine/crates/xerj-autoindex/src/session_memory.rs
+  s_f20ba7af8aaec4::t_8ad40d28c59bfd 29,48,74,98,106,111,131,167
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.7",
+  "base_commit_sha": "7095b01476cf955c0afd303d50f1e9cbd83071a2",
+  "prompts": {},
+  "sessions": {
+    "s_f20ba7af8aaec4": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a19b88-748a-7e90-a005-f76002a1a01b",
+        "model": "gpt-6.1-sol"
+      },
+      "human_author": "Jarvis <mengda636431@gmail.com>"
+    }
+  }
+}
