@@ -1,0 +1,19 @@
+user-feedback/16-agent-field-reports/2026-11-03-mcp-stdio-gate.md
+  s_f20ba7af8aaec4::t_128afac1de1d31 1-13
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.7",
+  "base_commit_sha": "21cdd16fad72d9492f778dc5a2352c82193d5572",
+  "prompts": {},
+  "sessions": {
+    "s_f20ba7af8aaec4": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a19b88-748a-7e90-a005-f76002a1a01b",
+        "model": "gpt-6.1-sol"
+      },
+      "human_author": "Jarvis <mengda636431@gmail.com>"
+    }
+  }
+}
