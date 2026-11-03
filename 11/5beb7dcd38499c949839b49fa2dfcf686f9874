@@ -1,0 +1,21 @@
+engine/crates/xerj-mcp/src/lib.rs
+  s_f20ba7af8aaec4::t_51944db5f666c7 423-433,493-518,520,536-539,627-632,638,650-659,4103-4220
+CHANGELOG.md
+  s_f20ba7af8aaec4::t_51944db5f666c7 135-148
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.7",
+  "base_commit_sha": "115beb7dcd38499c949839b49fa2dfcf686f9874",
+  "prompts": {},
+  "sessions": {
+    "s_f20ba7af8aaec4": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a19b88-748a-7e90-a005-f76002a1a01b",
+        "model": "gpt-6.1-sol"
+      },
+      "human_author": "Jarvis <mengda636431@gmail.com>"
+    }
+  }
+}
